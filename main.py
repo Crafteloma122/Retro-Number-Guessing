@@ -863,7 +863,7 @@ def use_hint():
 def draw_menu():
     header("RETRO ARCADE / V8.3")
     text("GUESS THE", W//2, 112, "lg", WHITE, True)
-    text("UNKNOWN.", W//2, 164, "xl", CYAN, True)
+    text("NUMBER.", W//2, 164, "xl", CYAN, True)
     text(f"LEVEL {data.get('level', 1)}   |   XP {data.get('xp', 0)}/{xp_for_level(data.get('level', 1))}", W//2, 211, "sm", YELLOW, True)
     panel((315, 258, 370, 78), (40, 125, 144), (19, 39, 62))
     text("CURRENT SCORE", 335, 270, "xs", MUTED)
@@ -1343,8 +1343,6 @@ while running:
     update_animations(dt)
     audio.update(dt, state)
 
-    # Keep the previous frame's hitboxes alive while processing mouse events.
-    # They are rebuilt after events, immediately before drawing the new frame.
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             if state == "GAME" and tries_used > 0:
@@ -1372,8 +1370,7 @@ while running:
             elif event.key == pygame.K_ESCAPE:
                 if state != "MENU": state = "MENU"
 
-    # Do NOT clear this before processing events: click() needs the hitboxes
-    # created by the previous rendered frame. Clearing here prevents stale hits.
+
     hitboxes = {}
     background(dt)
     if state == "MENU": draw_menu()
