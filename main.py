@@ -62,6 +62,25 @@ MODES = {
                  "description": "A changing challenge each day."},
 }
 
+# Bank coins use their own reward/penalty bands, independently of score multipliers.
+# Tougher modes pay more on a win and risk a larger (but capped) loss.
+BANK_REWARD_RANGES = {
+    "EASY": (10, 18),
+    "MEDIUM": (16, 28),
+    "HARD": (24, 40),
+    "BLITZ": (22, 38),
+    "SURVIVAL": (32, 50),
+    "DAILY": (25, 45),
+}
+BANK_LOSS_RANGES = {
+    "EASY": (2, 5),
+    "MEDIUM": (4, 8),
+    "HARD": (6, 12),
+    "BLITZ": (7, 13),
+    "SURVIVAL": (10, 18),
+    "DAILY": (5, 10),
+}
+
 DAILY_CHALLENGES = [
     {"id": "CLASSIC", "name": "CLASSIC SIGNAL", "max": 300, "tries": 12,
      "reward_range": (75, 110), "parity": None,
@@ -534,6 +553,7 @@ achievements_new = []
 known_low = 1
 known_high = MODES[mode]["max"]
 coins_earned_this_round = 0
+coins_lost_this_round = 0
 shop_category = "THEMES"
 WIN_PARTICLES = []
 COIN_PARTICLES = []
@@ -572,7 +592,8 @@ def unlock(name):
 def start_round(which):
     global mode, secret, tries_left, tries_used, guess, feedback, feedback_color
     global base_roll, state, result, result_points, known_low, known_high
-    global coins_earned_this_round, WIN_PARTICLES, round_is_daily, round_daily_date
+    global coins_earned_this_round, coins_lost_this_round
+    global WIN_PARTICLES, round_is_daily, round_daily_date
     global DAILY_CHALLENGE, result_coin_animation_started
     if which in SPECIAL_MODE_PRICES and which not in data["unlocked_modes"]:
         notify("Unlock this special mode in the Shop first.")
@@ -618,6 +639,7 @@ def start_round(which):
     feedback, feedback_color = "Type your guess and press ENTER.", MUTED
     base_roll = random.randint(*cfg["range"])
     result, result_points, coins_earned_this_round = "", 0, 0
+    coins_lost_this_round = 0
     result_coin_animation_started = False
     WIN_PARTICLES = []
     state = "GAME"
@@ -694,7 +716,9 @@ def draw_animations():
 
 def finish(won):
     global state, result, result_points, result_message
-    global points_revealed, points_roll_started, coins_earned_this_round, round_is_daily, round_daily_date
+    global points_revealed, points_roll_started, coins_earned_this_round
+    global coins_lost_this_round, round_is_daily, round_daily_date
+    coins_lost_this_round = 0
     # Tie a daily attempt to the date it started, even if the round crosses midnight.
     today = datetime.date.today().isoformat()
     daily_first_attempt = False
@@ -724,10 +748,9 @@ def finish(won):
         data["score"] += result_points
         data["lifetime_points"] += result_points
         data["personal_best"] = max(data["personal_best"], data["score"])
-        # Coins are deliberately less generous than score, especially for repeatable
-        # classic rounds. Faster wins still earn more because result_points includes
-        # the speed multiplier. Tougher modes have higher base rewards.
-        coins_earned_this_round = max(5, result_points // 4)
+        # Roll bank coins from a mode-specific band so rewards feel predictable,
+        # fair, and separate from the score multiplier.
+        coins_earned_this_round = random.randint(*BANK_REWARD_RANGES[mode])
         data["coins"] += coins_earned_this_round
         data["lifetime_coins_earned"] = data.get("lifetime_coins_earned", 0) + coins_earned_this_round
         xp_gain = max(10, result_points // 4) + max(0, MODES[mode]["tries"] - tries_used) * 2
@@ -758,6 +781,11 @@ def finish(won):
         penalty = base_roll
         result_points = -min(data["score"], penalty)
         data["score"] = max(0, data["score"] - penalty)
+        # A loss also costs a small, difficulty-based number of bank coins.
+        # Never allow a negative bank balance: the deduction is capped by what remains.
+        requested_coin_penalty = random.randint(*BANK_LOSS_RANGES[mode])
+        coins_lost_this_round = min(data.get("coins", 0), requested_coin_penalty)
+        data["coins"] = max(0, data.get("coins", 0) - coins_lost_this_round)
         result = "DEFEAT"
         result_message = random.choice(LOSE_LINES)
         audio.play("lose")
@@ -1131,6 +1159,8 @@ def draw_results():
             text(f"+{coins_earned_this_round:,} BANK COINS", W//2, 405, "xs", YELLOW, True)
         else:
             text(f"-{abs(result_points):,} POINTS", W//2, 370, "md", RED, True)
+            text(f"-{coins_lost_this_round:,} BANK COINS", W//2, 400, "xs", ORANGE, True)
+        text(f"BANK BALANCE: {data['coins']:,}", W//2, 432, "xs", YELLOW, True)
 
     if points_revealed:
         text(f"CURRENT SCORE: {data['score']:,}", W//2, 462, "md", CYAN, True)
@@ -1142,13 +1172,21 @@ def draw_results():
         text(message, W//2, 475, "xs", MUTED, True)
 
     if points_revealed:
-        btn("again", "PLAY AGAIN", (265, 550, 210, 50), CYAN, (25, 66, 78))
-        btn("result_menu", "MAIN MENU", (505, 550, 210, 50), PURPLE)
+        if round_is_daily:
+            # Daily is one attempt per date, whether won or lost: no replay button.
+            btn("result_menu", "MAIN MENU", (395, 550, 210, 50), PURPLE)
+        else:
+            btn("again", "PLAY AGAIN", (265, 550, 210, 50), CYAN, (25, 66, 78))
+            btn("result_menu", "MAIN MENU", (505, 550, 210, 50), PURPLE)
     else:
-        panel((265, 550, 210, 50), (58, 66, 93), (26, 30, 50), 12)
-        panel((505, 550, 210, 50), (58, 66, 93), (26, 30, 50), 12)
-        text("PLAY AGAIN", 370, 575, "sm", (91, 99, 126), True)
-        text("MAIN MENU", 610, 575, "sm", (91, 99, 126), True)
+        if round_is_daily:
+            panel((395, 550, 210, 50), (58, 66, 93), (26, 30, 50), 12)
+            text("MAIN MENU", 500, 575, "sm", (91, 99, 126), True)
+        else:
+            panel((265, 550, 210, 50), (58, 66, 93), (26, 30, 50), 12)
+            panel((505, 550, 210, 50), (58, 66, 93), (26, 30, 50), 12)
+            text("PLAY AGAIN", 370, 575, "sm", (91, 99, 126), True)
+            text("MAIN MENU", 610, 575, "sm", (91, 99, 126), True)
         text("Navigation unlocks after the result is revealed.", W//2, 622, "xs", MUTED, True)
 
 def draw_stats():
