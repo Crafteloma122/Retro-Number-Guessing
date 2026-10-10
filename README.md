@@ -2,6 +2,10 @@
 
 A number guessing game built with Python and Pygame.
 
+## Screenshot
+
+![Number Guessing Game](Capture2.PNG)
+
 ## Run it
 Open a terminal in this folder, then run:
 ```bash
