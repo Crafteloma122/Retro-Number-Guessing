@@ -1,6 +1,6 @@
-# NUMBER//GUESSER — Retro Arcade V8.3
+# NUMBER//GUESSER — Retro Arcade
 
-A number guessing game built with Python and Pygame. V8.3 keeps the arcade progression, shop, themes, special modes, achievements, sound, and save compatibility, while tightening special-mode attempts and balancing coin rewards.
+A number guessing game built with Python and Pygame.
 
 ## Run it
 Open a terminal in this folder, then run:
@@ -48,19 +48,3 @@ python main.py
 
 ## Save data
 Progress is saved automatically in a stable user data folder: Windows `%APPDATA%/NumberGuesser/player_data.json`; macOS/Linux `~/.local/share/number-guesser/player_data.json`, unless `XDG_DATA_HOME` is set. Existing progress in the old project `data/player_data.json` is migrated when found. Re-extracting a new copy of the game does not normally erase progress.
-
-
-## V8.2 maintenance fixes
-- Compact, non-wrapping mode records in Statistics.
-- ASCII-only interface symbols for reliable rendering across system fonts.
-- Corrupt saves are preserved as `player_data.corrupt.json` (timestamped backups are used if that name already exists).
-- Daily challenge data refreshes when the calendar date changes while the game is open.
-- A round quit after at least one guess is recorded as a loss.
-
-
-## V8.3 balance and anti-repeat changes
-- Medium and Hard now allow 15 and 20 attempts, respectively.
-- Blitz and Survival now allow 7 and 9 attempts. Their old limits matched the worst-case number of guesses needed by binary search, making optimal wins guaranteed.
-- Standard coin payouts are reduced from half to one quarter of earned points, with a 5-coin minimum. Fast wins and harder modes still pay more.
-- Daily attempt dates are saved in a ledger. The same calendar date cannot be replayed for another daily bonus after restarting or moving the clock back to a date already used.
-- Existing saves migrate automatically; all coins, unlocks, and progression remain intact.
