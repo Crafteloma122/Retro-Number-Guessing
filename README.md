@@ -4,7 +4,7 @@ A number guessing game built with Python and Pygame.
 
 ## Screenshot
 
-![Number Guessing Game](Capture3.PNG)
+![Number Guessing Game](Capture4.PNG)
 
 ## Run it
 Open a terminal in this folder, then run:
